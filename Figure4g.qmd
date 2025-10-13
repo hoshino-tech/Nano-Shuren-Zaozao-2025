@@ -1,0 +1,25 @@
+---
+title: "Figure4g GSEA"
+format: html
+editor: visual
+---
+
+```{r}
+#| KEGG_GSEA
+setwd('F:\\NC_code\\Figure4g')
+gsea_KEGG_result = gseKEGG(geneList = genelist, 
+                           organism = "hsa", 
+                           pvalueCutoff = 1,
+                           eps = 1e-20,
+                           minGSSize = 5)
+```
+
+```{r}
+#| Visualize the results
+pdf('GSEA_KEGG_ferroptosis.pdf',width = 5,height = 5)
+gseaNb(object = gsea_KEGG_result,
+       geneSetID = 'hsa04216',
+       addPval = T,
+       curveCol = c('#76BA99'))
+dev.off()
+```

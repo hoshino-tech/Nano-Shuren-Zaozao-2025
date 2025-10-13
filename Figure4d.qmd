@@ -1,0 +1,44 @@
+---
+title: "Figure4d GO_Up_Bubble_Plot"
+format: html
+editor: visual
+---
+
+```{r}
+#| data clean and prepare
+setwd('F:\\NC_code\\Figure4d')
+inputdata = fread('GO_Up_inputdata.csv',data.table = F,header = T)
+colnames(inputdata)[5] = 'pvalue'
+inputdata = inputdata[order(inputdata$Enrichment_score),]
+inputdata$Term = factor(inputdata$Term,levels = inputdata$Term)
+colors = c('#AD0B26','#F1605DFF','#FD9567FF','#FEC98DFF','#FCFDBFFF','white',
+           "#DEF5E5FF","#BEE2EE","#9FCFE4","#5C8FC2","#40498EFF",'#353E99')
+```
+
+```{r}
+#| Bubble Plot
+pdf('Figure4d_GO_bubbleplot.pdf',width = 8.5,height = 6)
+ggplot(inputdata, 
+       aes(x = Enrichment_score, 
+           y = Term, 
+           size = ListHits, 
+           color = pvalue)) +
+  geom_point(alpha = 1) +  
+  scale_size(range = c(1, 5)) +  
+  scale_color_gradientn(colours = colors,
+                       values = scales::rescale(c(1:12)),
+                       )+  
+  labs(
+    x = "Enrichment Score",  
+    y = "",          
+    size = "GeneNumber",    
+    color = "pvalue"  
+  ) +
+  theme_bw() +  
+  theme(
+    axis.text.y = element_text(size = 12),  
+    axis.text.x = element_text(size = 12),  
+    axis.title = element_text(size = 14)    
+  )
+dev.off()
+```

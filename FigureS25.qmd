@@ -1,0 +1,50 @@
+---
+title: "FigureS25"
+format: html
+editor: visual
+---
+
+```{r}
+#| data clean and prepare
+setwd('F:\\NC_code\\FigureS25')
+data = fread('DN70-vs-RD-all.gene.csv',
+             data.table = F,
+             header = T)
+data = data[,c(1,5,6,8,9)]
+colnames(data) = c('Genes','FC','logFC','q.Value','group')
+data$group = case_when(
+  data$logFC >1 & data$q.Value < 0.05 ~ 'Up',
+  data$logFC < -1 & data$q.Value < 0.05 ~ 'Down',
+  TRUE ~ 'No change')
+table(data$group)
+colnames(data)[5] = 'regulate'
+```
+
+```{r}
+#| ggplot to draw picture
+pdf('FigureS25_Volcano_Plot.pdf',width = 9,height = 8)
+ggplot(
+  data,
+  aes(logFC, -log10(q.Value),
+      color = regulate))+
+  geom_hline(
+    yintercept = -log10(0.05), 
+    linetype = "dashed", 
+    color = "#999999")+
+  geom_vline(
+    xintercept = c(-1,1), 
+    linetype = "dashed", 
+    color = "#999999")+
+  geom_point(size = 1) +
+  theme_bw(base_size = 12)+
+  scale_color_manual(values = c('Down' = '#084A61',
+                                'No Change' = "#AAE5F4",
+                                'Up' = '#C1554E'))+
+  theme(panel.grid = element_blank(),
+        legend.position = 'right') +
+  xlab("Log2(FoldChange)")+
+  ylab("-Log10(FDR q-value)")+
+  scale_x_continuous(limits = c(-5,5))+
+  scale_y_continuous(limits = c(0,75))
+dev.off()
+```

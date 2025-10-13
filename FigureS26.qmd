@@ -1,0 +1,42 @@
+---
+title: "FigureS26 GO_Down_Bubble_Plot"
+format: html
+editor: visual
+---
+
+```{r}
+#| data clean
+setwd('F:\\NC_code\\FigureS26')
+inputdata = fread('GO_Top_Down_inputdata.csv',data.table = F,header = T)
+colnames(inputdata)[5] = 'pvalue'
+inputdata = inputdata[order(inputdata$Enrichment_score),]
+inputdata$Term = factor(inputdata$Term,levels = inputdata$Term)
+```
+
+```{r}
+#| Bubble plot
+pdf('FigureS26_GO_Down_bubbleplot.pdf',width = 8.5,height = 6)
+ggplot(inputdata, 
+       aes(x = Enrichment_score, 
+           y = Term, 
+           size = ListHits, 
+           color = pvalue)) +
+  geom_point(alpha = 1) +  
+  scale_size(range = c(1, 5)) +  
+  scale_color_gradientn(colours = colors,
+                        values = scales::rescale(c(1:12)),
+  )+  
+  labs(
+    x = "Enrichment Score",  
+    y = "",          
+    size = "GeneNumber",    
+    color = "pvalue"  
+  ) +
+  theme_bw() +  
+  theme(
+    axis.text.y = element_text(size = 12),  
+    axis.text.x = element_text(size = 12),  
+    axis.title = element_text(size = 14)    
+  )
+dev.off()
+```

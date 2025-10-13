@@ -1,0 +1,257 @@
+---
+title: "GSE87211 FigureS1e-j"
+format: html
+editor: visual
+---
+
+```{r}
+#| load and clean GSE87211 data
+setwd('F:\\NC_code\\FigureS1E-J')
+inputFile = "GEO_87211_Matrix.txt"     
+rt = read.table(inputFile, header=T, sep="\t", check.names=F)
+rt = rt[!duplicated(rt$geneNames),]
+rownames(rt) = rt$geneNames
+rt = rt[,-1]
+qx = as.numeric(quantile(rt, c(0, 0.25, 0.5, 0.75, 0.99, 1.0), na.rm=T))
+LogC = ( (qx[5]>100) || ( (qx[6]-qx[1])>50 && qx[2]>0) )
+if(LogC){
+  rt[rt<0] = 0
+  rt = log2(rt+1)}
+data = normalizeBetweenArrays(rt)
+```
+
+```{r}
+#| Calculate EPIC,MCPcounter and ESTIMATE score
+
+#| Run EPIC programm
+epic = EPIC(bulk=data)
+CAF_EPIC = epic$cellFractions[,"CAFs"]
+outTab = rbind(ID=colnames(epic$cellFractions), epic$cellFractions)
+write.table(outTab, file="score.EPIC.txt", sep="\t", quote=F, col.names=F)
+
+#| Run MCPcounter programm
+MCPcounter.estimate = MCPcounter.estimate(
+  data,
+  featuresType="HUGO_symbols",
+  probesets=read.table(
+    "MCPcounter.probesets.txt",
+    sep="\t",
+    stringsAsFactors=FALSE,
+    colClasses="character"),
+  genes=read.table(
+    "MCPcounter.genes.txt",
+    sep="\t",
+    stringsAsFactors=FALSE,
+    header=TRUE,
+    colClasses="character",
+    check.names=FALSE)
+)
+CAF_MCPcounter = MCPcounter.estimate["Fibroblasts",]
+outTab = rbind(ID = colnames(MCPcounter.estimate), MCPcounter.estimate)
+write.table(outTab, file = "score.MCPcounter.txt", sep="\t", quote=F, col.names=F)
+
+#| Run ESTIMATE programm
+filterCommonGenes(input.f="GEO_Matrix.txt", 
+                  output.f="commonGenes.gct", 
+                  id="GeneSymbol")
+estimateScore(input.ds = "commonGenes.gct",
+              output.ds="estimateScore.gct")
+
+#| Organise all three score
+scores = read.table("estimateScore.gct", skip=2, header=T)
+rownames(scores) = scores[,1]
+scores = t(scores[,3:ncol(scores)])
+rownames(scores) = gsub("\\.", "\\-", rownames(scores))
+StromalScore = scores[,"StromalScore"]
+out = rbind(ID=colnames(scores), scores)
+write.table(out, file="score.estimate.txt", sep="\t", quote=F, col.names=F)
+
+#| Output CAF score
+caf = cbind(CAF_EPIC, CAF_MCPcounter, StromalScore)
+outTab = rbind(ID=colnames(caf), caf)
+write.table(outTab, file="GEO_87211_CAF.txt", sep="\t", quote=F, col.names=F)
+```
+
+```{r}
+#| FigureS1e GSE87211 MCPcounter Score
+#| plot_boxplot function has been existed in 'GSE17538 Figure1a-b_FigureS1a-d.qmd' doucument 
+time = fread('GSE87211_time.txt',data.table = F,header = T)
+CAF_Score = fread('GEO_87211_CAF.txt',data.table = F,header = T) %>% subset(.$ID %in% time$id) %>% 
+  .[match(time$id,.$ID),] 
+identical(CAF_Score$ID,time$id)
+inputdata = cbind(time,CAF_Score$CAF_MCPcounter)
+colnames(inputdata)[4] = 'Score'
+inputdata$futime = inputdata$futime/365
+res.cut = surv_cutpoint(inputdata, 
+                        time = "futime", 
+                        event = "fustat",
+                        variables =c("Score"))
+res.cat = surv_categorize(res.cut)
+res.cat[,"Score"] = factor(res.cat[,"Score"], levels=c("low","high"))
+boxplot_inputdata = data.frame(MCP_score = inputdata$Score,
+                               Group = res.cat$Score)
+table(boxplot_inputdata$Group)
+plot5 = plot_boxplot(boxplot_inputdata, 
+                     x_col = "Group", 
+                     y_col = "MCP_score", 
+                     fill_col = "Group",
+                     group_n = c(103, 93),
+                     custom_text = "MCPcounter",
+                     text_offset = 0.05)
+ggsave('MCPcounter_Score_GSE87211.pdf',plot5,height = 6,width = 4)
+```
+
+```{r}
+#| FigureS1f MCPcounter Survival
+fit = survfit(Surv(futime, fustat) ~ Score, data = res.cat)
+diff = survdiff(Surv(futime, fustat) ~ Score,data =res.cat)
+pValue = round(1-pchisq(diff$chisq, df=1),5)
+##
+fit_cox = coxph(Surv(futime, fustat) ~ Score, data = res.cat)
+cox_summary = summary(fit_cox)
+# 提取 HR 和 95% CI
+HR = round(cox_summary$coefficients[2], 3)  # HR
+HR_CI = round(cox_summary$conf.int[3:4], 3) # 95% CI
+pdf('GSE87211_MCPcounter_Survival.pdf',height = 4,width = 8,onefile = F)
+ggsurvplot(fit,
+           data=res.cat,
+           conf.int=T,
+           #pval='',
+           pval.size=3,
+           #legend.title=Score,
+           #legend.labs=c("low","high"),
+           xlab="Time(years)",
+           ylab="Overall survival",
+           palette=c("#77BBFF","#FFA3A3"),#DAEDFF,#FFE7E7
+           break.time.by=2,
+           risk.table=T,
+           risk.table.title="Number at risk",
+           risk.table.height=.35,
+           ggtheme = theme_bw(),
+           legend.title = "CAF_MAPcounter",
+           legend.labs = c("LowScore", "HighScore"),
+           pval = paste0('P < ',round(pValue,3),
+                         "\nHR = ", HR, 
+                         "\n95%CI:", HR_CI[1], "-", HR_CI[2]))
+dev.off()
+```
+
+```{r}
+#| FigureS1g EPIC score
+inputdata = cbind(time,CAF_Score$CAF_EPIC)
+colnames(inputdata)[4] = 'Score'
+inputdata$futime = inputdata$futime/365
+res.cut = surv_cutpoint(inputdata, 
+                        time = "futime", 
+                        event = "fustat",
+                        variables =c("Score"))
+res.cat = surv_categorize(res.cut)
+res.cat[,"Score"] = factor(res.cat[,"Score"], levels=c("low","high"))
+boxplot_inputdata = data.frame(EPIC_score = inputdata$Score,
+                               Group = res.cat$Score)
+table(boxplot_inputdata$Group)
+plot3 = plot_boxplot(boxplot_inputdata, 
+                     x_col = "Group", 
+                     y_col = "EPIC_score", 
+                     fill_col = "Group",
+                     group_n = c(91, 105),
+                     custom_text = "EPIC",
+                     text_offset = 0.05,
+                     low_color = "#F3CE40", 
+                     high_color = "#0073C2",
+                     ylab = "EPIC Score")
+ggsave('EPIC_Score_GSE87211.pdf',plot3,height = 6,width = 4)
+```
+
+```{r}
+#| FigureS1h EPIC Survival 
+fit = survfit(Surv(futime, fustat) ~ Score, data = res.cat)
+diff = survdiff(Surv(futime, fustat) ~ Score,data =res.cat)
+pValue = round(1-pchisq(diff$chisq, df=1),5)
+fit_cox = coxph(Surv(futime, fustat) ~ Score, data = res.cat)
+cox_summary = summary(fit_cox)
+HR = round(cox_summary$coefficients[2], 2)  
+HR_CI = round(cox_summary$conf.int[3:4], 3) 
+pdf('GSE87211_EPIC_Survival.pdf',height = 4,width = 8,onefile = F)
+ggsurvplot(fit,
+           data=res.cat,
+           conf.int=T,
+           #pval='',
+           pval.size=3,
+           #legend.title=Score,
+           #legend.labs=c("low","high"),
+           xlab="Time(years)",
+           ylab="Overall survival",
+           palette=c("#F3CE40","#0073C2"),#DAEDFF,#FFE7E7
+           break.time.by=2,
+           risk.table=T,
+           risk.table.title="Number at risk",
+           risk.table.height=.35,
+           ggtheme = theme_bw(),
+           legend.title = "CAF_EPIC",
+           legend.labs = c("LowScore", "HighScore"),
+           pval = paste0('P = ',round(pValue,3),
+                         "\nHR = ", HR, 
+                         "\n95%CI:", HR_CI[1], "-", HR_CI[2]))
+dev.off()
+```
+
+```{r}
+#| FigureS1i ESTIMATE Score
+inputdata = cbind(time,CAF_Score$StromalScore)
+colnames(inputdata)[4] = 'Score'
+inputdata$futime = inputdata$futime/365
+res.cut = surv_cutpoint(inputdata, 
+                        time = "futime", 
+                        event = "fustat",
+                        variables =c("Score"))
+res.cat = surv_categorize(res.cut)
+res.cat[,"Score"] = factor(res.cat[,"Score"], levels=c("low","high"))
+boxplot_inputdata = data.frame(Stromal_score = inputdata$Score,
+                               Group = res.cat$Score)
+table(boxplot_inputdata$Group)
+plot4 = plot_boxplot(boxplot_inputdata, 
+                     x_col = "Group", 
+                     y_col = "Stromal_score", 
+                     fill_col = "Group",
+                     group_n = c(170, 26),
+                     custom_text = "ESTIMATE",
+                     text_offset = 0.18,
+                     low_color = "#CFC3D9", 
+                     high_color = "#A5C1A8",
+                     ylab = "Stromal Score")
+ggsave('ESTIMATE_Score_GSE87211.pdf',plot4,height = 6,width = 4)
+```
+
+```{r}
+#| FigureS1j ESTIMATE Survival
+fit = survfit(Surv(futime, fustat) ~ Score, data = res.cat)
+diff = survdiff(Surv(futime, fustat) ~ Score,data =res.cat)
+pValue = round(1-pchisq(diff$chisq, df=1),5)
+fit_cox = coxph(Surv(futime, fustat) ~ Score, data = res.cat)
+cox_summary = summary(fit_cox)
+HR = round(cox_summary$coefficients[2], 3)  
+HR_CI = round(cox_summary$conf.int[3:4], 3) 
+pdf('GSE87211_ESTIMATE_Survival.pdf',height = 4,width = 8,onefile = F)
+ggsurvplot(fit,
+           data=res.cat,
+           conf.int=T,
+           #pval='',
+           pval.size=3,
+           #legend.title=Score,
+           #legend.labs=c("low","high"),
+           xlab="Time(years)",
+           ylab="Overall survival",
+           palette=c("#CFC3D9","#A5C1A8"),#DAEDFF,#FFE7E7
+           break.time.by=2,
+           risk.table=T,
+           risk.table.title="Number at risk",
+           risk.table.height=.35,
+           ggtheme = theme_bw(),
+           legend.title = "CAF_ESTIMATE",
+           legend.labs = c("LowScore", "HighScore"),
+           pval = paste0('P = ',round(pValue,3),
+                         "\nHR = ", HR, 
+                         "\n95%CI:", HR_CI[1], "-", HR_CI[2]))
+dev.off()
+```

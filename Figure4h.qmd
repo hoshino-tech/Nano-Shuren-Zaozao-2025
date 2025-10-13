@@ -1,0 +1,81 @@
+---
+title: "Figure4h CircoHeatmap and barplot"
+format: html
+editor: visual
+---
+
+```{r}
+#| Figure4h: CircoHeatmap
+#| Circoheatmap :data prepare
+setwd('F:\\NC_code\\Figure4h')
+heatmap_inputdata = fread('FC2_3_GO_combined_inputdata.csv',data.table = F,header = T)
+heatmap_inputdata = column_to_rownames(heatmap_inputdata,var = 'id')
+heatmap_inputdata = t(scale(t(heatmap_inputdata)))
+mycol = colorRamp2(c(-1,0,1),c('#5C8FC2','white','#F1605DFF'))
+```
+
+```{r}
+#| Circoheatmap
+pdf('CircoHeatmap_figure4h.pdf',width = 6,height = 6)
+circos.par(gap.after = c(10),start.degree = 90,gap.degree = 30)
+circos.heatmap(heatmap_inputdata,
+               col = mycol,
+               dend.side = 'inside',
+               rownames.side = 'outside',
+               rownames.col = 'black',
+               cell.border = 'white',
+               rownames.cex = 1,
+               track.height = 0.3,
+               dend.track.height = 0.2)
+lg = Legend(title = '',col_fun = mycol)
+grid.draw(lg)
+#circos.clear()
+dev.off()
+```
+
+```{r}
+#| Figure4h : Barplot
+#| data prepare
+Figure4h_Barplot_inputdata = fread('FD.csv',data.table = F,header = T)
+Figure4h_Barplot_inputdata$gene_id = as.character(Figure4h_Barplot_inputdata$gene_id)
+colored_labels = sapply(Figure4h_Barplot_inputdata$gene_id, function(x) {
+  if(x == "CCR7" || x == "CCL3") {
+    return(paste0("<span style='color:#AD0B26'>", x, "</span>"))
+  } else if(x == "CXCL12") {
+    return(paste0("<span style='color:#353E99'>", x, "</span>"))
+  } else {
+    return(x)  
+  }
+})
+Figure4h_Barplot_inputdata$gene_id = factor(Figure4h_Barplot_inputdata$gene_id,
+levels = Figure4h_Barplot_inputdata$gene_id)
+```
+
+```{r}
+#| Figure4h : Barplot
+#| Output figure
+pdf('Figure4h_barplot.pdf',height = 5,width = 5)
+ggplot(Figure4h_Barplot_inputdata, aes(x = gene_id, y = log2FoldChange, fill = group)) +
+  geom_bar(stat = "identity", position = "identity", width = 0.7) +
+  ggtext::geom_richtext(
+    aes(y = 0, label = colored_labels),
+    fill = NA,          
+    label.color = NA,   
+    hjust = 0.5,
+    size = 5,
+    position = position_nudge(y = ifelse(Figure4h_Barplot_inputdata$log2FoldChange > 0, -1, 1))
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0.1, 0.1)), breaks = c(-2, 0, 2, 4)) + 
+  coord_flip() +  
+  labs(title = "", x = "", y = "log2(FC)") +
+  theme_classic() +
+  theme(
+    axis.line.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank()
+  ) +
+  geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
+  scale_fill_manual(values = c('up' = '#F6C0C1', 'down' = '#AACDEB'))+
+  theme(legend.position = 'none')
+dev.off()
+```

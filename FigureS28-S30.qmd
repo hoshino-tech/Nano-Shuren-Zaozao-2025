@@ -1,0 +1,136 @@
+---
+title: "FigureS28-S30 GSEA GO and KEGG"
+format: html
+editor: visual
+---
+
+```{r}
+#| GSEA for GO
+#| the results of GSEA for KEGG has been done in 'Figure4g.qmd' 
+GO = msigdbr(species = "Homo sapiens", 
+                category = "C5" ) %>% 
+  dplyr::select(gs_name, entrez_gene)
+gsea_res_GO = GSEA(genelist, 
+                      TERM2GENE = GO,
+                      minGSSize = 1,
+                      maxGSSize = 500,
+                      pvalueCutoff = 1,
+                      pAdjustMethod = "BH"
+)
+```
+
+```{r}
+#| FigureS28
+#| 'for loop' for each GSEA pdf output 
+setwd('F:\\NC_code\\FigureS28')
+results_GO = gsea_res_GO@result
+results_GO[which(grepl('CCR_CHEMOKINE_RECEPTOR_BINDING',results_GO$ID,ignore.case = T)),1]
+candidate_pathways = c('GOMF_CCR_CHEMOKINE_RECEPTOR_BINDING',       'GOMF_C_X_C_CHEMOKINE_RECEPTOR_ACTIVITY')
+for (i in candidate_pathways) {
+  pdf_file = paste0("GSEA_", i, ".pdf")
+  pdf(pdf_file, width = 5, height = 5)
+  p1 = gseaNb(object = gsea_res_GO,
+              geneSetID = i,
+              addPval = TRUE,
+              curveCol = c('#76BA99'),
+              pvalX = 0.95,
+              pvalY = 0.83)
+  print(p1)
+  dev.off()
+}
+#| KEGG GSEA output
+candidate_pathways_KEGG = c('hsa04060','hsa04668','hsa04630','hsa04064','hsa04010')
+for (i in candidate_pathways_KEGG) {
+  pdf_file = paste0("GSEA_", i, ".pdf")
+  pdf(pdf_file, width = 5, height = 5)
+  p1 = gseaNb(object = gsea_KEGG_result,
+         geneSetID = i,
+         addPval = TRUE,
+         curveCol = c('#76BA99'),
+         pvalX = 0.95,
+         pvalY = 0.83)
+  print(p1)
+  dev.off()
+}
+```
+
+```{r}
+#|FigureS29
+setwd('F:\\NC_code\\FigureS29')
+results_GO[which(grepl('WNT_PROTEIN_BINDING',results_GO$ID,ignore.case = T)),1]
+pdf('GO_WNT_PROTEIN_BINDING.pdf', width = 5, height = 5)
+gseaNb(object = gsea_res_GO,
+            geneSetID = "GOMF_WNT_PROTEIN_BINDING",
+            addPval = TRUE,
+            curveCol = c('#76BA99'),
+            pvalX = 0.95,
+            pvalY = 0.83)
+dev.off()
+candidate_pathways_KEGG = c('hsa04310','hsa04350','hsa04151')
+for (i in candidate_pathways_KEGG) {
+  pdf_file = paste0("GSEA_", i, ".pdf")
+  pdf(pdf_file, width = 5, height = 5)
+  p1 = gseaNb(object = gsea_KEGG_result,
+              geneSetID = i,
+              addPval = TRUE,
+              curveCol = c('#76BA99'),
+              pvalX = 0.95,
+              pvalY = 0.83)
+  print(p1)
+  dev.off()
+}
+```
+
+```{r}
+#| FigureS30
+setwd('F:\\NC_code\\FigureS30')
+results_GO[which(grepl('cellular_response_to_copper',results_GO$ID,ignore.case = T)),1]
+results_GO[which(grepl('cytokine_activity',results_GO$ID,ignore.case = T)),1]
+results_GO[which(grepl('negative_regulation_of_growth',results_GO$ID,ignore.case = T)),1]
+results_GO[which(grepl('positive_regulation_of_MAP_kinase_activity',results_GO$ID,ignore.case = T)),1]
+results_GO[which(grepl('immune_response',results_GO$ID,ignore.case = T)),1]
+results_GO[which(grepl('collagen_containing_extracellular',results_GO$ID,ignore.case = T)),1]
+results_GO[which(grepl('regulation_of_cell_growth',results_GO$ID,ignore.case = T)),1]
+results_GO[which(grepl('cell_junction',results_GO$ID,ignore.case = T)),1]
+results_GO[which(grepl('cell_migration',results_GO$ID,ignore.case = T)),1]
+results_GO[which(grepl('multicellular_organism_development',results_GO$ID,ignore.case = T)),1]
+results_GO[which(grepl('adherens_junction',results_GO$ID,ignore.case = T)),1]
+results_GO[which(grepl('cell_adhesion',results_GO$ID,ignore.case = T)),1]
+results_GO[which(grepl('angiogenesis',results_GO$ID,ignore.case = T)),1]
+candidate_pathways_GO = c( "GOBP_CELLULAR_RESPONSE_TO_COPPER_ION",
+"GOMF_CYTOKINE_ACTIVITY",
+"GOBP_NEGATIVE_REGULATION_OF_GROWTH",
+"GOBP_POSITIVE_REGULATION_OF_MAP_KINASE_ACTIVITY", 'GOBP_HUMORAL_IMMUNE_RESPONSE',
+"GOCC_COLLAGEN_CONTAINING_EXTRACELLULAR_MATRIX",
+"GOBP_REGULATION_OF_CELL_GROWTH",
+"GOCC_CELL_CELL_JUNCTION", 'GOBP_MONONUCLEAR_CELL_MIGRATION',
+"GOBP_MULTI_MULTICELLULAR_ORGANISM_PROCESS",
+"GOCC_ADHERENS_JUNCTION",
+"GOBP_CELL_ADHESION",
+"GOBP_SPROUTING_ANGIOGENESIS")
+for (i in candidate_pathways_GO) {
+  pdf_file = paste0("GSEA_", i, ".pdf")
+  pdf(pdf_file, width = 5, height = 5)
+  p1 = gseaNb(object = gsea_res_GO,
+              geneSetID = i,
+              addPval = TRUE,
+              curveCol = c('#76BA99'),
+              pvalX = 0.95,
+              pvalY = 0.83)
+  print(p1)
+  dev.off()
+}
+candidate_pathways_KEGG = c('hsa04061','hsa04072','hsa05200','hsa04931','hsa04514','hsa04115','hsa04360','hsa05416','hsa04015','hsa04020','hsa05169')
+for (i in candidate_pathways_KEGG) {
+  pdf_file = paste0("GSEA_", i, ".pdf")
+  pdf(pdf_file, width = 5, height = 5)
+  p1 = gseaNb(object = gsea_KEGG_result,
+              geneSetID = i,
+              addPval = TRUE,
+              curveCol = c('#76BA99'),
+              pvalX = 0.95,
+              pvalY = 0.83)
+  print(p1)
+  dev.off()
+}
+```

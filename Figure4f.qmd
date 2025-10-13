@@ -1,0 +1,46 @@
+---
+title: "Figure4f GSEA"
+format: html
+editor: visual
+---
+
+```{r}
+#| data clean
+setwd('F:\\NC_code\\Figure4f')
+gene_fold_exp = fread('DN70-vs-RD-diff-q-val-0.05-FC-2.gene.xls',data.table = F,header = T)
+gene_entrezid = bitr(geneID = gene_fold_exp$gene_id, 
+                      fromType = "SYMBOL", 
+                      toType = "ENTREZID", 
+                      OrgDb = "org.Hs.eg.db")
+head(gene_entrezid)
+gene_entrezid$logFC = gene_fold_exp$log2FoldChange[match(gene_entrezid$SYMBOL, gene_fold_exp$gene_id)]
+gene_entrezid = gene_entrezid[order(gene_entrezid$logFC,decreasing = T),]
+genelist = gene_entrezid$logFC
+names(genelist) = gene_entrezid$ENTREZID 
+head(genelist)
+GO_MF = msigdbr(species = "Homo sapiens", 
+                category = "C5" , 
+                subcategory = "GO:MF") %>% 
+  dplyr::select(gs_name, entrez_gene)
+```
+
+```{r}
+#| Run GSEA
+gsea_res_GO_MF = GSEA(genelist, 
+                 TERM2GENE = GO_MF,
+                 minGSSize = 10,
+                 maxGSSize = 500,
+                 pvalueCutoff = 1,
+                 pAdjustMethod = "BH"
+)
+```
+
+```{r}
+#| Visualize GSEA results
+pdf('GSEA_GOMF_cytokine_activity.pdf',width = 5,height = 5)
+gseaNb(object = gsea_res_GO_MF,
+       geneSetID = 'GOMF_CYTOKINE_ACTIVITY',
+       addPval = T,
+       curveCol = c('#76BA99'))
+dev.off()
+```
