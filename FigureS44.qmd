@@ -1,0 +1,67 @@
+---
+title: "FigureS44"
+format: html
+editor: visual
+---
+
+```{r}
+#| label: data prepare
+setwd('F:\\NC_code\\Single_cell_analysis\\E-MTAB-8107_DataSet')
+dge_fibroblast = readRDS('dge_fibroblast.rds')
+Genes =  c('NCL','CD44','TFRC','CXCR4','MUC1','EPCAM','PROM1','SELP','CEACAM5','EGFR','LRP1','NR3C1','FOLR2','NRP1','MRC1','TMEM97','SSTR1','FOLR1','CHEK2','LYVE1')
+dge_fibroblast@meta.data$Subcluster = Idents(dge_fibroblast)
+FigureS44_inputdata = Seurat::FetchData(dge_fibroblast,c(Genes,'Subcluster'))
+FigureS44_inputdata_cols = colnames(FigureS44_inputdata)[1:20]
+FigureS44_inputdata$Subcluster = factor(FigureS44_inputdata$Subcluster,levels = c('CAFs','NFs'))
+```
+
+```{r}
+#| label: FigureS44_Violin funtion
+scales::hue_pal()(2)
+FigureS44_Violin = function(col_names){
+  violinplot = ggplot(FigureS44_inputdata, aes_string(x = 'Subcluster', y = col_names)) +
+    geom_violin(aes(fill = Subcluster), 
+                scale = "width", trim = FALSE)+
+    theme_bw() +
+    theme(panel.grid = element_blank(),
+          strip.background = element_blank(),
+          strip.text.x = element_text(size = 10))+
+    scale_fill_manual(values = c("#F8766D","#00BFC4")) +
+    scale_colour_manual(values = c("#F8766D","#00BFC4"))+
+    theme(legend.position = "none",
+          axis.title.y = element_blank(),
+          axis.text.x = element_blank(),
+          text = element_text(colour = 'black',size = 40))+
+    labs(x = NULL,
+         y = NULL,
+         subtitle = col_names)+
+    theme(
+      plot.subtitle = element_text(
+        size = 40,
+        hjust = 1,
+        vjust = -5,
+        margin = margin(t = 0, r = 0, unit = "pt")
+      )
+    )+
+    scale_x_discrete(
+      limits = c("CAFs", "NFs"))+
+    scale_y_continuous(expand = expansion(mult = c(0.05, .1)))+
+    geom_signif(comparisons=list(c(1,2)),
+                test="wilcox.test",      
+                map_signif_level = T,  
+                tip_length = 0,     
+                size = 0.5,textsize =10,
+                step_increase=0.1,
+                y_position = c(max(FigureS44_inputdata[,col_names])*1.05)
+    )
+  
+  return(violinplot)
+}
+```
+
+```{r}
+#| Output FigureS44
+violinplots = lapply(FigureS44_inputdata_cols,FigureS44_Violin)  
+plots = grid.arrange(grobs = violinplots, ncol = 4)
+ggsave('20_Candidate_Genes_violinplot_CAF_NF_Qian.pdf',plots,height = 20,width = 29.7)
+```

@@ -1,0 +1,316 @@
+---
+title: "Single Cell Analysis(E-MTAB-8107 dataset)"
+author: "Chen Xin"
+format: html
+editor: visual
+---
+
+E-MTAB-8107 is a CRC single cell dataset which is created by Qian (first author)
+
+```{r}
+#| label: E-MTAB-8107 scRNA-seq preprocessing
+#| label: For this part, we got some references from the Koncina (first author) article. The wibsite of the article is https://www.nature.com/articles/s41467-023-39953-w
+
+#setwd('F:\\NC_code\\Single_cell_analysis\\E-MTAB-8107_DataSet')
+
+metadata = fread('2099-Colorectalcancer_metadata.csv',
+                 data.table = F,
+                 header = T) %>% column_to_rownames(var = 'Cell')
+
+counts = Read10X(data.dir = '.\\CRC_10x',#matrix.mtx, genes.tsv (or features.tsv), and barcodes.tsv patg
+                 unique.features = T,
+                 strip.suffix = F)
+dge = CreateSeuratObject(counts = counts, 
+                          meta.data = metadata,
+                          project   = "E-MTAB-8107",
+                          min.cells  = 10,     # only genes > 10 cells
+                          min.features  = 200,
+                          names.field = 1,
+                          names.delim  = "_")    # only cells with > 200 genes)
+dge
+```
+
+```{r}
+#| label: Mitochondria genes
+dge[["percent.mt"]] = PercentageFeatureSet(dge, pattern = "^MT-")
+VlnPlot(dge,features = c('nFeature_RNA','nCount_RNA','percent.mt'),ncol = 3,pt.size = F)
+```
+
+```{r}
+#| label: Filter genes 
+dge = subset(dge, subset =  nFeature_RNA <= 6000 & percent.mt <= 15)
+VlnPlot(dge,features = c('nFeature_RNA','nCount_RNA','percent.mt'),ncol = 3,pt.size = F)
+```
+
+```{r}
+#| label: Normalise by log transfromation
+dge = NormalizeData(object = dge,
+                  normalization.method = "LogNormalize",
+                  scale.factor = 10000)
+#| label: Find high variable genes
+x_low_cutoff  = 0.0125
+x_high_cutoff = 3 
+y_cutoff      = 0.5 
+y_high_cutoff = Inf
+dge = FindVariableFeatures(object = dge,
+                            mean.function = ExpMean,                                 dispersion.function = LogVMR,
+            mean.cutoff = c(x_low_cutoff, x_high_cutoff),
+           dispersion.cutoff = c(y_cutoff, y_high_cutoff))
+VariableFeaturePlot(dge)
+```
+
+```{r}
+#| label: Calculate G2/M and S phase score
+data("cc.genes.updated.2019")
+# ssegregate this list into markers of G2/M phase and markers of S phase
+dge = CellCycleScoring(object = dge,
+         s.features = cc.genes.updated.2019$s.genes,
+         g2m.features = cc.genes.updated.2019$g2m.genes,
+        set.ident = TRUE)
+#| label: scale the data while using mt, S and G2/M score as covariates to eliminate confounding factors
+dge = ScaleData(dge,
+                vars.to.regress = c("nCount_RNA",
+                                     "percent.mt",
+                                     "S.Score",
+                                     "G2M.Score"))
+#| label: Reduce dimensions by PCA program, 40 npcs was chosen for analysis
+dge = RunPCA(object= dge, 
+              npcs = 40, 
+              ndims.print = 1:5,     
+              nfeatures.print = 5,     
+              use.imputed = FALSE,
+              rev.pca = FALSE)
+DimHeatmap(dge,dims = 1:5,cells = 400,balanced = T)
+ElbowPlot(dge,ndims = 50)
+```
+
+```{r}
+#| label: Reduce dimensions to 2 levels using UMAP
+dge = RunUMAP(dge,
+               reduction.use = "pca",
+               dims = 1:40,
+               seed.use = 42)
+#| label: Show distribution of all cell type refer to original reference
+DimPlot(object = dge, 
+        pt.size = .1, 
+        group.by = "CellType", 
+        cols="Paired")
+```
+
+```{r}
+#| label: Re-calculate K-NN and re-cluster for our own analysis
+dge = FindNeighbors(dge, reduction = "pca", dims = 1:40 ) %>% FindClusters()
+DimPlot(object = dge, 
+        pt.size = .1)
+```
+
+```{r}
+#| label: Rename the new cluster
+dge_manual = RenameIdents(dge,
+                          '0' = 'T cells',
+                          '1' = 'Myeloid cells',
+                          '2' = 'Epithelial cells',
+                          '3' = 'B cells',
+                          '4' = 'B cells',
+                          '5' = 'Endothelial cells',
+                          '6' = 'T cells',
+                          '7' = 'Fibroblasts',
+                          '8' = 'Fibroblasts',
+                          '9' = 'Epithelial cells',
+                          '10' = 'T cells',
+                          '11' = 'Fibroblasts',
+                          '12' = 'Fibroblasts',
+                          '13' = 'Epithelial cells',
+                          '14' = 'Epithelial cells',
+                          '15' = 'Epithelial cells',
+                          '16' = 'T cells',
+                          '17' = 'Myeloid cells',
+                          '18' = 'B cells',
+                          '19' = 'B cells',
+                          '20' = 'Enteric glial cells',
+                          '21' = 'Mast cells',
+                          '22' = 'Fibroblasts',
+                          '23' = 'B cells',
+                          '24' = 'Fibroblasts',
+                          '25' = 'Epithelial cells',
+                          '26' = 'Fibroblasts',
+                          '27' = 'T cells',
+                          '28' = 'Fibroblasts',
+                          '29' = 'Endothelial cells',
+                          '30' = 'Epithelial cells')
+DimPlot(object = dge_manual, 
+        pt.size = .1)
+```
+
+```{r}
+#| label: Save E-MTAB-8107 SCRNA-seq data
+saveRDS(dge_manual,'E-MTAB-8107_seurat_dge.rds')
+```
+
+Figure 6A
+
+```{r}
+#| label: Set path
+setwd('F:\\NC_code\\Single_cell_analysis\\E-MTAB-8107_DataSet')
+dge = readRDS('E-MTAB-8107_seurat_dge.rds')
+out.path = getwd()
+```
+
+```{r}
+#| label: write_pdf function
+write_pdf <- function (x, 
+                       filename, 
+                       width = NA, 
+                       height = NA, 
+                       units = "cm", ...) {
+  temp <- tempfile() 
+  on.exit(unlink(temp)) 
+  grDevices::cairo_pdf(temp, family = "sans", ...) 
+  if (isTRUE(is.na(width)) && !"null" %in% unitType(x$widths)) 
+    width <- convertWidth(sum(x$widths), unitTo = units, 
+                          valueOnly = TRUE)
+  if (isTRUE(is.na(height)) && !"null" %in% unitType(x$heights)) 
+    height <- convertHeight(sum(x$heights), unitTo = units, 
+                            valueOnly = TRUE)
+  
+  width <- grid::convertWidth(unit(width, units = units), unitTo = "inches", valueOnly = TRUE)
+  height <- grid::convertHeight(unit(height, units = units), unitTo = "inches", valueOnly = TRUE)
+  invisible(dev.off())
+  grDevices::cairo_pdf(filename, family = "sans", width = width, height = height, ...)  
+  grid::grid.draw(x) 
+  invisible(dev.off()) 
+  filename
+}
+```
+
+```{r}
+#| label: Figure6A
+Figure6A = DimPlot(dge,pt.size =  0.1)+
+  scale_colour_manual(values = rev(brewer.pal(n = 9, name = "Spectral")))+
+  theme_bw()+
+  theme(panel.grid = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank())
+Figure6A
+```
+
+```{r}
+#| label: Figure6A output
+set_panel_size(p = Figure6A,
+               width = unit(5,'cm'),
+               height = unit(5,'cm')) %>% 
+  write_pdf(file.path(out.path,'Figure6A_output.pdf'))
+```
+
+Figure6B
+
+```{r}
+#| label: Figure6B data prepare
+genes_list = tribble(~features.plot,~celltype,
+                   'CD14','(Myeloid cells)',
+                   'CD68','(Myeloid cells)',
+                   'CD3E','(T cells)',
+                   'CD3D','(T cells)',
+                   'COL1A1','(Fibroblasts)',
+                   'COL1A2','(Fibroblasts)',
+                   'PECAM1','(Endothelial cells)',
+                   'VWF','(Endothelial cells)',
+                   'CPA3','(Mast cells)',
+                   'KIT','(Mast cells)',
+                   'EPCAM','(Epithelial cells)',
+                   'KRT8','(Epithelial cells)',
+                   'CD79A','(B cells)',
+                   'CD79B','(B cells)',
+                   'PLP1','(Enteric glial cells)',
+                   'S100B','(Enteric glial cells)') %>% 
+  mutate(celltype = fct_inorder(celltype)) %>% 
+  tidyr::unite(label,
+               features.plot,
+               celltype,
+               sep = " ",
+               remove = F)
+```
+
+```{r}
+#| label: Dot_Figure6B function
+Dot_Figure6B = function(data){
+  data %>% mutate(avg.exp.log2 = log2(avg.exp+1)) %>% 
+    ggplot(aes(x = id,y = features.plot))+
+    geom_point(mapping = aes_string(size = 'pct.exp', fill = 'avg.exp.log2'),  
+               shape = 21,  
+               color = "black", 
+               stroke = 1)+
+    scale_size(range = c(0.3,6))+
+    cowplot::theme_cowplot()+
+    theme_bw()+
+    theme(axis.title = element_blank(),
+          panel.grid = element_blank(),
+          axis.text.x = element_text(angle = 45,hjust = 1))+
+    scale_fill_gradientn(colours = rev(brewer.pal(n = 11, name = "Spectral")))+
+    guides(size = guide_legend(title = 'Percent Expressed'))
+} 
+```
+
+```{r}
+#| label: Figure6B
+Figure6B = DotPlot(dge,
+            features = genes_list %>%  pull(features.plot),
+            assay = 'RNA',
+            scale = F,
+            cluster.idents = T
+)$data %>% 
+  mutate(id = fct_relevel(id,'Myeloid cells','T cells','Fibroblasts','Endothelial cells','Mast cells','Epithelial cells','B cells','Enteric glial cells')) %>%
+  left_join(genes_list) %>% 
+  mutate(features.plot = fct_reorder(features.plot,as.numeric(celltype))) %>% 
+  Dot_Figure6B()
+Figure6B
+```
+
+```{r}
+#| label: Figure6B output
+set_panel_size(p = Figure6B,
+               width = unit(10.5,'cm'),
+               height = unit(10.5,'cm')) %>% 
+  write_pdf(file.path(out.path,'Figure6B_output.pdf'))
+```
+
+Figure6C
+
+```{r}
+#| label: Figure6C 
+Figure6C = lapply(c('NCL', 'CD44', 'EPCAM', 'CXCR4', 'TFRC', 'MUC1', 'PROM1', 'CEACAM5', 'SELP'), function(gene) {
+  p = FeaturePlot(dge, features = gene, pt.size = 0.1, order = TRUE) +
+    scale_colour_gradientn(colours = rev(brewer.pal(n = 11, name = "RdYlBu"))) +
+    theme_bw() +
+    theme(panel.grid = element_blank(),
+          axis.title.x = element_blank(),  
+          axis.title.y = element_blank())
+  
+  if (gene != 'NCL' && gene != 'TFRC' ) {
+    p <- p + theme(panel.border = element_blank(),
+                   axis.text.x = element_blank(),
+                   axis.text.y = element_blank(),
+                   axis.ticks.x = element_blank(),
+                   axis.ticks.y = element_blank())  
+  }
+  
+  return(p)
+})
+combined_plot = ggpubr::ggarrange(plotlist = Figure6C, ncol = 4, nrow = 3, common.legend = TRUE, legend = "bottom")
+```
+
+```{r}
+#| label: Show Featureplot of 9 genes
+combined_plot
+```
+
+```{r}
+#| label: Figure6C output
+set_panel_size(p = combined_plot,
+               width = unit(66.7,'cm'),
+               height = unit(50,'cm')) %>% 
+  write_pdf(file.path(out.path,'Figure6C_output.pdf'))
+```

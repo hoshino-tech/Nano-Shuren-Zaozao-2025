@@ -1,0 +1,107 @@
+---
+title: "FigureS?? "
+format: html
+editor: visual
+---
+
+```{r}
+#| label: input ScRNA-seq dataset
+setwd('F:\\NC_code\\Single_cell_analysis\\E-MTAB-8107_DataSet')
+dge = readRDS('E-MTAB-8107_seurat_dge.rds')
+```
+
+```{r}
+#| label: Identify 'Fibroblasts' subcluster and re-cluster
+dge_fibroblast = subset(dge,idents = 'Fibroblasts')
+dge_fibroblast = dge_fibroblast %>% 
+  NormalizeData() %>% 
+  FindVariableFeatures() %>% 
+  ScaleData() %>% RunPCA() %>%
+  FindNeighbors(dims = 1:20) %>% 
+  FindClusters(resolution = 0.1) %>% 
+  RunUMAP(dims = 1:20)
+DimPlot(dge_fibroblast)
+```
+
+```{r}
+#| Rename Fibroblasts subclusters
+FeaturePlot(dge_fibroblast,c('DCN','IGFBP6','MFAP5',
+                       'ACTA2','TAGLN','CTHRC1'),
+            pt.size = 0.1)
+dge_fibroblast = RenameIdents(dge_fibroblast,
+                              '0' = 'NFs',
+                              '1' = 'CAFs',
+                              '2' = 'CAFs',
+                              '3' = 'CAFs',
+                              '4' = 'CAFs',
+                              '5' = 'CAFs')
+DimPlot(dge_fibroblast)
+```
+
+```{r}
+#| Output UMAP of Fibroblasts subclusters
+mycolor = c('CAFs' = '#FF7F00' , 'NFs' = '#1F78B4')
+pdf('Fibroblasts_Subcluster_Dimplot.pdf',
+    height = 4,width = 5.5)
+DimPlot(dge_fibroblast,cols = mycolor)+
+  theme_bw()+
+  theme(panel.grid = element_blank())
+dev.off()
+```
+
+'write_pdf' function has been created in 'Figure6A-6C.qmd'
+
+```{r}
+#| label: Output the dotplot of CAFs and NFs marker genes
+out.path = getwd()
+markergenes = c('DCN','IGFBP6','MFAP5',
+                       'ACTA2','TAGLN','CTHRC1') 
+Dotplot_marker_genes = DotPlot(dge_fibroblast,
+                               markergenes,
+  cols = c('#B3B3B3','#E41A1C'))+
+  theme_bw()+
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 45,hjust = 1,vjust = 1))+
+  xlab('')+
+  ylab('')+
+  guides(colour = guide_legend(ncol = 2, 
+                                 order = 1, 
+                                 title = NULL, 
+                                 label.hjust = 0,
+                                 override.aes = list(size = 3)))
+set_panel_size(p = Dotplot_marker_genes,
+               width = unit(12.5,'cm'),
+               height = unit(2.5,'cm')) %>% 
+  write_pdf(file.path(out.path,'Dotplot_Fibroblasts_subclusters.pdf'))
+```
+
+```{r}
+#| label: Output the dotplot of nine candidate genes using violin plot of CAFs and NFs 
+out.path = getwd()
+Candidate_genes = c('NCL','CD44','EPCAM','CXCR4','TFRC',
+                    'MUC1','PROM1','CEACAM5','SELP')
+Dotplot_Candidate_genes  = DotPlot(dge_fibroblast,
+                               Candidate_genes,
+  cols = c('#B3B3B3','#E41A1C'))+
+  theme_bw()+
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 45,hjust = 1,vjust = 1))+
+  xlab('')+
+  ylab('')+
+  guides(colour = guide_legend(ncol = 2, 
+                                 order = 1, 
+                                 title = NULL, 
+                                 label.hjust = 0,
+                                 override.aes = list(size = 3)))
+set_panel_size(p = Dotplot_Candidate_genes,
+               width = unit(12.5,'cm'),
+               height = unit(2.5,'cm')) %>% 
+  write_pdf(file.path(out.path,'Dotplot_Fibroblasts_Candidate_genes.pdf'))
+```
+
+```{r}
+#| label: save dge_fibroblast
+setwd('F:\\NC_code\\Single_cell_analysis\\E-MTAB-8107_DataSet')
+getwd()
+saveRDS(dge_fibroblast,file = 'dge_fibroblast.rds')
+```
