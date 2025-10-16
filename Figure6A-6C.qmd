@@ -104,55 +104,12 @@ DimPlot(object = dge,
         pt.size = .1)
 ```
 
-```{r}
-#| label: Rename the new cluster
-dge_manual = RenameIdents(dge,
-                          '0' = 'T cells',
-                          '1' = 'Myeloid cells',
-                          '2' = 'Epithelial cells',
-                          '3' = 'B cells',
-                          '4' = 'B cells',
-                          '5' = 'Endothelial cells',
-                          '6' = 'T cells',
-                          '7' = 'Fibroblasts',
-                          '8' = 'Fibroblasts',
-                          '9' = 'Epithelial cells',
-                          '10' = 'T cells',
-                          '11' = 'Fibroblasts',
-                          '12' = 'Fibroblasts',
-                          '13' = 'Epithelial cells',
-                          '14' = 'Epithelial cells',
-                          '15' = 'Epithelial cells',
-                          '16' = 'T cells',
-                          '17' = 'Myeloid cells',
-                          '18' = 'B cells',
-                          '19' = 'B cells',
-                          '20' = 'Enteric glial cells',
-                          '21' = 'Mast cells',
-                          '22' = 'Fibroblasts',
-                          '23' = 'B cells',
-                          '24' = 'Fibroblasts',
-                          '25' = 'Epithelial cells',
-                          '26' = 'Fibroblasts',
-                          '27' = 'T cells',
-                          '28' = 'Fibroblasts',
-                          '29' = 'Endothelial cells',
-                          '30' = 'Epithelial cells')
-DimPlot(object = dge_manual, 
-        pt.size = .1)
-```
-
-```{r}
-#| label: Save E-MTAB-8107 SCRNA-seq data
-saveRDS(dge_manual,'E-MTAB-8107_seurat_dge.rds')
-```
-
 Figure 6A
 
 ```{r}
 #| label: Set path
 setwd('F:\\NC_code\\Single_cell_analysis\\E-MTAB-8107_DataSet')
-dge = readRDS('E-MTAB-8107_seurat_dge.rds')
+dge = readRDS('dge_final_E-MTAB-8107_seurat_dge.rds')
 out.path = getwd()
 ```
 
