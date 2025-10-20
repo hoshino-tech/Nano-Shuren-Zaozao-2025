@@ -1,0 +1,25 @@
+---
+title: "README"
+format: html
+editor: visual
+---
+
+## README
+
+**Amelioration of Colorectal Cancer-Associated Fibroblasts-Induced Immunosuppressive Microenvironment by Ferroptosis-Based Nanotherapy**
+
+---------------------------------------------------------------------------
+
+CAF_Score_other_files: Provides input files for CAF scoring and survival analysis, as well as probe and gene files required for MCP scoring.
+
+Figure6 FindAllMarkers_and_Reannotate_clusters.qmd: Re-annotates the E-MTAB-8107 dataset using 'FindAllMarkers' function and canonical markers.
+
+R_packages.qmd: Lists all the R packages required for the code in this article.
+
+mycolor.qmd: Provides some color settings used in the code of this article.
+
+GSE \<x\> Figure \<x\> .qmd: Used for CAF scoring and survival analysis.
+
+Figure \<x\> .qmd: Used for other analyses and visualizations such as single-cell analysis, KEGG, GSEA etc.
+
+Others: The custom '`write_pdf'` function and the custom '`Dot_Figure6B'` function in this article are referenced from the GitHub repository mdm/koncina_et_al_2023.
