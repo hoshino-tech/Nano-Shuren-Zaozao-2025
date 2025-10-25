@@ -5,10 +5,7 @@
 ---------------------------------------------------------------------------
 
 * #### **CAF_Score_other_files**: 
-Provides input files for CAF scoring and survival analysis, as well as probe and gene files required for MCP scoring.
-
-* #### **Figure6 FindAllMarkers_and_Reannotate_clusters.qmd**:
-Re-annotates the E-MTAB-8107 dataset using 'FindAllMarkers' function and canonical markers.
+Provides probe and gene files required for MCP scoring.
 
 * #### **R_packages.qmd**: 
 Lists all the R packages required for the code in this article.
