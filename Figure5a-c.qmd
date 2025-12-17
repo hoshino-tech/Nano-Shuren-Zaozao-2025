@@ -258,7 +258,8 @@ Figure 6A
 
 ```{r}
 #| label: Set path
-setwd('F:\\NC_code\\Single_cell_analysis\\E-MTAB-8107_DataSet')
+setwd('F:\\NC_code\\Single_cell_analysis/E-MTAB-8107_DataSet/')
+getwd()
 dge = readRDS('dge_final_E-MTAB-8107_seurat_dge.rds')
 out.path = getwd()
 ```

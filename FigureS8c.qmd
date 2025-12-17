@@ -1,21 +1,21 @@
 ---
-title: "FigureS26 GO_Down_Bubble_Plot"
+title: "FigureS8c KEGG_Down_Bubble_Plot"
 format: html
 editor: visual
 ---
 
 ```{r}
 #| data clean
-setwd('F:\\NC_code\\FigureS26')
-inputdata = fread('GO_Top_Down_inputdata.csv',data.table = F,header = T)
-colnames(inputdata)[5] = 'pvalue'
+setwd('F:\\NC_code\\FigureS27')
+inputdata = fread('KEGG_down_inputdata.csv',data.table = F,header = T)
+colnames(inputdata)[6] = 'pvalue'
 inputdata = inputdata[order(inputdata$Enrichment_score),]
 inputdata$Term = factor(inputdata$Term,levels = inputdata$Term)
 ```
 
 ```{r}
-#| Bubble plot
-pdf('FigureS26_GO_Down_bubbleplot.pdf',width = 8.5,height = 6)
+#| Bubble Plot
+pdf('FigureS27_KEGG_Down_bubbleplot.pdf',width = 8.5,height = 6)
 ggplot(inputdata, 
        aes(x = Enrichment_score, 
            y = Term, 

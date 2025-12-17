@@ -1,0 +1,289 @@
+---
+title: "FigureS2"
+format: html
+editor: visual
+---
+
+```{r}
+###GSE17538
+setwd('F:\\NC_code\\Figure1A-B_S1a-d')
+clinical = fread('GSE17538_clinical_data.csv',data.table = F,header = T)
+inputdata = fread('GSE17538_ESTIATE_inputdata.csv',data.table = F,header = T)
+clinical = subset(clinical,clinical$geo_accession %in% inputdata$Patient_ID)
+inputdata = inputdata[match(clinical$geo_accession,inputdata$Patient_ID),]
+identical(clinical$geo_accession,inputdata$Patient_ID)
+inputdata$Gender = clinical$`gender:ch1`
+table(inputdata$Group,inputdata$Gender)
+chisq.test(inputdata$Group,inputdata$Gender)
+###GSE87211
+setwd('F:\\NC_code\\FigureS1E-J')
+clinical = fread('GSE87211_clinical_data.csv',data.table = F,header = T)
+inputdata = fread('GSE87211_ESTIMATE_inputdata.csv',data.table = F,header = T)
+clinical = subset(clinical,clinical$geo_accession %in% inputdata$Patient_ID)
+inputdata = inputdata[match(clinical$geo_accession,inputdata$Patient_ID),]
+identical(clinical$geo_accession,inputdata$Patient_ID)
+inputdata$Gender = clinical$`gender:ch1`
+table(inputdata$Group,inputdata$Gender)
+#table(inputdata$Group)
+chisq.test(inputdata$Group,inputdata$Gender)
+###Qian_DataSet
+###计算不同patient之间的性别差异中CAF的比例
+EachSampleClusterDisA$Sex = ifelse(EachSampleClusterDisA$PatientGroup == 'Patient4' |
+                                     EachSampleClusterDisA$PatientGroup == 'Patient5' | 
+                                     EachSampleClusterDisA$PatientGroup == 'Patient7' ,'male','female')
+Fibroblast_Sex = filter(EachSampleClusterDisA,EachSampleClusterDisA$CellTypes == 'Fibroblast')
+Fibroblast_Sex = filter(Fibroblast_Sex,Fibroblast_Sex$Tissue == 'C')
+pdf('Qian_Sex_CAF_female_male.pdf',width = 3.5,height = 6.5)
+ggplot(data = Fibroblast_Sex, aes(x = Sex, 
+                                  #color=PatientGroup,
+                                  y=Number,
+                                  color = Sex)) + #log2(as.numeric(CopyNumber)))
+  geom_boxplot(width = 0.5,size = 0.4)+
+  geom_dotplot(binaxis = 'y',stackdir = 'center',fill = 'white',color = 'black',dotsize = 0.5)+
+  scale_x_discrete(limit=c('female','male'),labels=c('female','male'))+
+  scale_y_continuous(expand=c(0.2,0))+
+  scale_color_manual(values= c("#66C2A5","#FC8D62"),name="")+#p1,p2,p3,p4,p5严格配色
+  #scale_fill_manual(values = c("#66C2A5","#FC8D62"))+
+  #geom_line(linetype = "dashed",na.rm = T)+
+  ylab("Number of CAF")+
+  theme_bw()+
+  theme(axis.text=element_text(color = "black"),
+        panel.background = element_blank(),
+        panel.grid=element_blank(),
+        legend.title=element_blank(), 
+        axis.text.y=element_text(color = "black"),
+        strip.background = element_blank(),
+        strip.text = element_text(size=12),
+        axis.title.x = element_blank(),
+        axis.line = element_line(color="black"),
+        legend.text = element_text(size=10),
+        axis.text.x=element_text(size=8,colour = "black",angle=45,hjust=1,vjust=1))+
+  ggpubr::stat_compare_means(comparisons = list(c("female","male")),label="p.format",method = "wilcox.test",paired =F )+
+  #facet_wrap(~Tissue,nrow=1,scale="free")+
+  NoLegend()
+#stat_summary(fun.data = 'mean_sdl',
+#fun.args = list(mult = 1),
+#geom = 'pointrange',
+#color = '#E31A1C')
+dev.off()
+##保存数据
+getwd()
+write.csv(Fibroblast_Sex,'Qian_Fibroblast_Sex.csv',row.names = F)
+###按Sex对Qian重新分析
+DimPlot(dge)
+metadata = dge@meta.data
+patient_mapping <- c(
+  "scrEXT001" = "Patient1",
+  "scrEXT002" = "Patient1",
+  "scrEXT003" = "Patient1",
+  "scrEXT009" = "Patient2",
+  "scrEXT010" = "Patient2",
+  "scrEXT011" = "Patient2",
+  "scrEXT012" = "Patient3",
+  "scrEXT013" = "Patient3",
+  "scrEXT014" = "Patient3",
+  "scrEXT018" = "Patient4",
+  "scrEXT019" = "Patient4",
+  "scrEXT020" = "Patient4",
+  "scrEXT021" = "Patient5",
+  "scrEXT022" = "Patient5",
+  "scrEXT023" = "Patient5",
+  "scrEXT024" = "Patient6",
+  "scrEXT025" = "Patient6",
+  "scrEXT026" = "Patient6",
+  "scrEXT027" = "Patient7",
+  "scrEXT028" = "Patient7",
+  "scrEXT029" = "Patient7"
+)
+metadata$PatientGroup <- patient_mapping[metadata$orig.ident]
+metadata$sex = ifelse(metadata$PatientGroup == 'Patient4' |
+                        metadata$PatientGroup == 'Patient5' | 
+                        metadata$PatientGroup == 'Patient7' ,'male','female')
+dge@meta.data = metadata
+DimPlot(dge,group.by = 'sex')
+Idents(dge) = dge@meta.data$sex
+Male_dge = subset(dge,idents = 'male')
+Idents(Male_dge) = Male_dge@meta.data$CellType
+DotPlot(Male_dge,'NCL')
+Female_dge = subset(dge,idents = 'female')
+Idents(Female_dge) = Female_dge@meta.data$CellType
+DotPlot(Female_dge,'NCL')
+plot1 = DimPlot(Male_dge,
+        cols = mycolor[1:9])+
+  theme_bw()+
+  theme(panel.grid = element_blank())
+plot2 = FeaturePlot(Male_dge,
+            c('NCL'),
+            #cols = plasma(10),
+            pt.size = 0.1,
+            order = T)+
+  scale_colour_gradientn(colours = rev(brewer.pal(n = 10, name = "RdBu")))+
+  theme_bw()+
+  theme(panel.grid = element_blank())
+plot3 = DimPlot(Female_dge,
+                cols = mycolor[1:9])+
+  theme_bw()+
+  theme(panel.grid = element_blank())
+plot4 = FeaturePlot(Female_dge,
+                    c('NCL'),
+                    #cols = plasma(10),
+                    pt.size = 0.1,
+                    order = T)+
+  scale_colour_gradientn(colours = rev(brewer.pal(n = 10, name = "RdBu")))+
+  theme_bw()+
+  theme(panel.grid = element_blank())
+pdf('F:\\NC返修20250429\\20250526_Sex性别问题\\Qian_Male_Featureplot_NCL.pdf',
+    height = 8,width = 10.5)
+grid.arrange(plot1,plot2,plot3,plot4,nrow = 2,widths = c(1.25,1))
+dev.off()
+write_rds(c(Male_dge,Female_dge),'F:\\NC返修20250429\\20250526_Sex性别问题\\Sex_Qian_dge.gz',compress = 'gz')
+###男性和女性肿瘤微环境中CAF的亚群区别及NCL表达亚群区别
+##Male
+getwd()
+setwd('F:\\NC返修20250429\\20250526_Sex性别问题')
+dge = read_rds('Sex_Qian_dge.gz')
+Male_dge = dge[[1]]
+Male_Fibro = subset(Male_dge,idents = 'Fibroblast')
+DimPlot(Male_Fibro)
+Male_Fibro = Male_Fibro %>% NormalizeData() %>% 
+  FindVariableFeatures() %>% ScaleData() %>% RunPCA() %>% 
+  FindNeighbors(dims = 1:20) %>% FindClusters(resolution = 0.1) %>% 
+  RunUMAP(dims = 1:20)
+DimPlot(Male_Fibro)
+DotPlot(Male_Fibro,
+        c('AIFM2','ACTA2','CD36','INHBA','FOXS1','KRT18','LTBP1','TAGLN','CTHRC1',
+          'FGF7','ADH1B','PDGFRA',
+          'DCN','IGFBP6','MFAP5',
+          'NCL'),#CAF
+        cols = c('#B3B3B3','#E41A1C'),
+        group.by = 'RNA_snn_res.0.1')+
+  theme_bw()+
+  theme(panel.grid = element_blank(), 
+        axis.text.x=element_text(angle = 45, hjust = 0.5,vjust=0.5))
+Idents(Male_Fibro) = Male_Fibro@meta.data$RNA_snn_res.0.1
+Male_Fibro = RenameIdents(Male_Fibro,
+                                 '0' = 'NF',
+                                 '1' = 'CAF',
+                                 '2' = 'CAF',
+                                 '3' = 'CAF',
+                                 '4' = 'NF')
+pdf('F:Male_QianDataSet_Fibroblast_Dimplot.pdf',width = 5.5,height = 4)
+DimPlot(Male_Fibro,
+        cols = c(mycolor[20],mycolor[26]))+
+  theme_bw()+
+  theme(panel.grid = element_blank())
+dev.off()
+DotPlot(Male_Fibro,'NCL')
+pdf('F:Male_QianDataSet_9_Candidate_Genes_Dotplot.pdf',width = 10,height = 4)
+DotPlot(Male_Fibro,Cancidata_Genes,
+        cols = c('#B3B3B3','#E41A1C'))+
+  theme_bw()+
+  theme(panel.grid = element_blank())+
+  labs(x='',y='')
+dev.off()
+Male_CAF_sub = subset(Male_Fibro,idents = 'CAF')
+DimPlot(Male_CAF_sub)
+Male_CAF_sub = Male_CAF_sub %>% NormalizeData() %>% 
+  FindVariableFeatures() %>% ScaleData() %>% RunPCA() %>% 
+  FindNeighbors(dims = 1:20) %>% FindClusters(resolution = 0.1) %>% 
+  RunUMAP(dims = 1:20)
+DimPlot(Male_CAF_sub)
+DotPlot(Male_CAF_sub,'NCL')
+Male_diff_Fibroblast <- FindAllMarkers(Male_CAF_sub, 
+                                  min.pct = 0.25, 
+                                  logfc.threshold = 0.25,
+                                  only.pos = T)
+Male_top_markers <- Male_diff_Fibroblast |>
+  group_by(cluster) |> 
+  slice_max(n = 20, order_by = avg_log2FC)
+DotPlot(Male_CAF_sub,c('INHBA','CCL13','ADGRF5','RERGL','PLA2G2A','NCL'))
+###Female
+Female_dge = dge[[2]]
+Female_Fibro = subset(Female_dge,idents = 'Fibroblast')
+DimPlot(Female_Fibro)
+Female_Fibro = Female_Fibro %>% NormalizeData() %>% 
+  FindVariableFeatures() %>% ScaleData() %>% RunPCA() %>% 
+  FindNeighbors(dims = 1:20) %>% FindClusters(resolution = 0.1) %>% 
+  RunUMAP(dims = 1:20)
+DimPlot(Female_Fibro)
+DotPlot(Female_Fibro,
+        c('AIFM2','ACTA2','CD36','INHBA','FOXS1','KRT18','LTBP1','TAGLN','CTHRC1',
+          'FGF7','ADH1B','PDGFRA',
+          'DCN','IGFBP6','MFAP5',
+          'NCL'),#CAF
+        cols = c('#B3B3B3','#E41A1C'),
+        group.by = 'RNA_snn_res.0.1')+
+  theme_bw()+
+  theme(panel.grid = element_blank(), 
+        axis.text.x=element_text(angle = 45, hjust = 0.5,vjust=0.5))
+Idents(Female_Fibro) = Female_Fibro@meta.data$RNA_snn_res.0.1
+Female_Fibro = RenameIdents(Female_Fibro,
+                          '0' = 'NF',
+                          '1' = 'CAF',
+                          '2' = 'CAF',
+                          '3' = 'NF',
+                          '4' = 'CAF',
+                          '5' = 'NF',
+                          '6' = 'CAF')
+pdf('F:Female_QianDataSet_Fibroblast_Dimplot.pdf',width = 5.5,height = 4)
+DimPlot(Female_Fibro,
+        cols = c(mycolor[20],mycolor[26]))+
+  theme_bw()+
+  theme(panel.grid = element_blank())
+dev.off()
+DotPlot(Female_Fibro,'NCL')
+pdf('F:Female_QianDataSet_9_Candidate_Genes_Dotplot.pdf',width = 10,height = 4)
+DotPlot(Female_Fibro,Cancidata_Genes,
+        cols = c('#B3B3B3','#E41A1C'))+
+  theme_bw()+
+  theme(panel.grid = element_blank())+
+  labs(x='',y='')
+dev.off()
+Female_CAF_sub = subset(Female_Fibro,idents = 'CAF')
+DimPlot(Female_CAF_sub)
+Female_CAF_sub = Female_CAF_sub %>% NormalizeData() %>% 
+  FindVariableFeatures() %>% ScaleData() %>% RunPCA() %>% 
+  FindNeighbors(dims = 1:20) %>% FindClusters(resolution = 0.1) %>% 
+  RunUMAP(dims = 1:20)
+DimPlot(Female_CAF_sub)
+DotPlot(Female_CAF_sub,'NCL')
+Female_diff_Fibroblast <- FindAllMarkers(Female_CAF_sub, 
+                                       min.pct = 0.25, 
+                                       logfc.threshold = 0.25,
+                                       only.pos = T)
+Female_top_markers <- Female_diff_Fibroblast |>
+  group_by(cluster) |> 
+  slice_max(n = 20, order_by = avg_log2FC)
+DotPlot(Male_CAF_sub,c('INHBA','CCL13','ADGRF5','RERGL','PLA2G2A','NCL','STEAP4'))
+DotPlot(Female_CAF_sub,c('INHBA','CCL13','ADGRF5','RERGL','PLA2G2A','NCL','STEAP4'))
+###
+Idents(Male_CAF_sub) = Male_CAF_sub@meta.data$RNA_snn_res.0.1
+Male_CAF_sub = RenameIdents(Male_CAF_sub,
+                            '0' = 'Other CAFs',
+                            '1' = 'Other CAFs',
+                            '2' = 'ADGRF5+STEAP4+CAFs',
+                            '3' = 'Other CAFs',
+                            '4' = 'Other CAFs')
+Female_CAF_sub = RenameIdents(Female_CAF_sub,
+                            '0' = 'Other CAFs',
+                            '1' = 'ADGRF5+STEAP4+CAFs',
+                            '2' = 'Other CAFs',
+                            '3' = 'Other CAFs',
+                            '4' = 'Other CAFs')
+pdf('F:Male_ADGRF5_STEAP4_Genes_Dotplot.pdf',width = 6,height = 4)
+DotPlot(Male_CAF_sub,c('ADGRF5','STEAP4','NCL'),
+        cols = c('#B3B3B3','#E41A1C'))+
+  theme_bw()+
+  theme(panel.grid = element_blank())+
+  labs(x='',y='')
+dev.off()
+pdf('F:Female_ADGRF5_STEAP4_Genes_Dotplot.pdf',width = 6,height = 4)
+DotPlot(Female_CAF_sub,c('ADGRF5','STEAP4','NCL'),
+        cols = c('#B3B3B3','#E41A1C'))+
+  theme_bw()+
+  theme(panel.grid = element_blank())+
+  labs(x='',y='')
+dev.off()
+
+
+```

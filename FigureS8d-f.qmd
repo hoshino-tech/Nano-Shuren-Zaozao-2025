@@ -1,5 +1,5 @@
 ---
-title: "FigureS28-S30 GSEA GO and KEGG"
+title: "FigureS8d-f GSEA GO and KEGG"
 format: html
 editor: visual
 ---
